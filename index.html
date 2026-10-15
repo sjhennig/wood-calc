@@ -7,16 +7,20 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Convert metric and decimal imperial measurements to the nearest 1/16 or 1/32 inch.">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Wood Calc">
-<meta name="theme-color" content="#f3f1ec">
+<meta name="theme-color" content="#f3f1ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17191c" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@500;600&display=swap">
 <style>
-/* Layout: one narrow column, like a card pinned above the bench — input on top, the answer in big type, a one-inch ruler showing where it lands. */
+/* Layout: one screen, calculator-style. Reading at the top, every control in the bottom half where a thumb reaches. */
 :root {
   --bg: #f3f1ec;        /* shop paper */
   --surface: #ffffff;
+  --key: #e6e3dc;
+  --key-press: #d6d2c9;
   --fg: #22252a;        /* graphite */
   --muted: #646a72;
   --line: #d9d6ce;
@@ -26,167 +30,176 @@
   --tape-ink: #22252a;
   --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --key-h: clamp(46px, 7.4dvh, 64px);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #17191c; --surface: #212429; --fg: #ece9e2; --muted: #9aa0a8; --line: #343840;
+    --bg: #17191c; --surface: #212429; --key: #2b2f35; --key-press: #3a3f47;
+    --fg: #ece9e2; --muted: #9aa0a8; --line: #343840;
     --accent: #ef7a3f; --accent-fg: #17191c; --tape: #e3b62b; --tape-ink: #17191c;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #17191c; --surface: #212429; --fg: #ece9e2; --muted: #9aa0a8; --line: #343840;
+  --bg: #17191c; --surface: #212429; --key: #2b2f35; --key-press: #3a3f47;
+  --fg: #ece9e2; --muted: #9aa0a8; --line: #343840;
   --accent: #ef7a3f; --accent-fg: #17191c; --tape: #e3b62b; --tape-ink: #17191c;
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; }
+html, body { margin: 0; height: 100%; }
 body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-body);
   font-size: 16px;
-  line-height: 1.45;
+  line-height: 1.35;
+  -webkit-text-size-adjust: 100%;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: max(20px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-bottom, 0px));
+  padding-block: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-bottom, 0px));
 }
-main { max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
-
-header h1 {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.6rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin: 0;
-  display: flex; align-items: center; gap: 10px;
-}
-header h1::before {
-  content: ""; width: 22px; height: 14px; border-radius: 2px;
-  background: var(--tape);
-  box-shadow: inset 0 -3px 0 rgba(0,0,0,.18);
-}
-
-.label {
-  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--muted); margin: 0 0 6px;
-}
-
-#value {
-  width: 100%;
-  font: 600 2.2rem/1.1 var(--font-body);
-  font-variant-numeric: tabular-nums;
-  color: var(--fg);
-  background: var(--surface);
-  border: 2px solid var(--line);
-  border-radius: 10px;
-  padding: 12px 14px;
-}
-#value:focus { outline: none; border-color: var(--accent); }
-
-.seg { display: grid; gap: 6px; }
-.seg.units { grid-template-columns: repeat(5, 1fr); }
-.seg.prec { grid-template-columns: repeat(2, 1fr); }
-.seg button {
-  font: 600 1rem var(--font-body);
-  color: var(--fg);
-  background: var(--surface);
-  border: 2px solid var(--line);
-  border-radius: 8px;
-  padding: 10px 0;
-  min-height: 46px;
-  cursor: pointer;
-}
-.seg button[aria-pressed="true"] {
-  background: var(--accent); border-color: var(--accent); color: var(--accent-fg);
-}
-.seg button:focus-visible, #copy:focus-visible { outline: 3px solid var(--tape); outline-offset: 2px; }
-
-.result {
-  background: var(--surface);
-  border: 2px solid var(--line);
-  border-radius: 12px;
-  padding: 16px;
+main {
+  max-width: 440px; min-height: 100%; margin: 0 auto;
   display: flex; flex-direction: column; gap: 10px;
 }
-.answer-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+
+/* ---- Readout ---- */
+.display {
+  flex: 1;
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 6px;
+  min-height: 0;
+  text-align: right;
+}
+.topline { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.brand {
+  font-family: var(--font-display); font-weight: 700; font-size: 0.95rem;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  display: flex; align-items: center; gap: 8px; margin: 0;
+}
+.brand::before { content: ""; width: 16px; height: 10px; border-radius: 2px; background: var(--tape); }
+#entry {
+  font: 600 1.35rem var(--font-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  min-width: 0; overflow-wrap: anywhere;
+}
+#entry .num { color: var(--fg); }
 #answer {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: clamp(2.6rem, 14vw, 3.6rem);
+  font-size: clamp(3rem, 17vw, 4.6rem);
   line-height: 1;
   font-variant-numeric: tabular-nums;
   margin: 0;
-  min-width: 0;
   overflow-wrap: anywhere;
 }
-#answer.empty { color: var(--muted); font-size: 2rem; }
-#copy {
-  flex: none;
-  font: 600 0.85rem var(--font-body);
-  color: var(--fg); background: transparent;
-  border: 2px solid var(--line); border-radius: 8px;
-  padding: 8px 12px; cursor: pointer;
+#answer.empty { color: var(--muted); }
+.details {
+  display: flex; flex-direction: column; gap: 1px;
+  font-size: 0.95rem; color: var(--muted); font-variant-numeric: tabular-nums;
 }
-.details { display: flex; flex-direction: column; gap: 2px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .details strong { color: var(--fg); font-weight: 600; }
+.details span:empty { display: none; }
 
-/* One inch of tape, ticks at the chosen precision */
-.tape-wrap { margin-top: 4px; }
-#tape { display: block; width: 100%; height: 64px; }
+#tape { display: block; width: 100%; height: 44px; border-radius: 4px; margin-top: 4px; }
 .tape-cap { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-footer { font-size: 0.85rem; color: var(--muted); }
+/* ---- Controls ---- */
+.controls { display: flex; flex-direction: column; gap: 8px; }
+button {
+  font-family: var(--font-body);
+  color: var(--fg);
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none; user-select: none;
+}
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.seg { display: grid; gap: 6px; padding: 4px; background: var(--key); border-radius: 12px; }
+.seg.units { grid-template-columns: repeat(5, 1fr); }
+.seg.prec { grid-template-columns: repeat(2, 1fr); }
+.seg button {
+  background: transparent;
+  font-weight: 600; font-size: 1.05rem;
+  min-height: 42px;
+}
+.seg.prec button { min-height: 36px; font-size: 1rem; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+
+.pad {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: var(--key-h);
+}
+.pad button {
+  background: var(--key);
+  font-size: 1.6rem; font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  transition: background-color .08s;
+}
+.pad button:active { background: var(--key-press); }
+.pad .fn { font-size: 1.05rem; font-weight: 600; color: var(--muted); }
+.pad .zero { grid-column: span 2; }
+#copy { grid-row: span 2; background: var(--accent); color: var(--accent-fg); font-size: 1.1rem; font-weight: 600; }
+#copy:active { filter: brightness(.9); }
+
+@media (prefers-reduced-motion: reduce) { .pad button { transition: none; } }
 </style>
 </head>
 <body>
 <main>
-  <header><h1>Wood Calc</h1></header>
-
-  <section>
-    <p class="label"><label for="value">Measurement</label></p>
-    <input id="value" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" value="127" aria-describedby="answer">
+  <section class="display" aria-live="polite">
+    <div class="topline">
+      <p class="brand">Wood Calc</p>
+      <span id="entry"></span>
+    </div>
+    <p id="answer">5"</p>
+    <div class="details">
+      <span id="feet"></span>
+      <span id="exact"></span>
+      <span id="error"></span>
+    </div>
+    <div aria-hidden="true">
+      <svg id="tape" viewBox="0 0 320 44" preserveAspectRatio="none"></svg>
+      <div class="tape-cap"><span id="tape-left"></span><span id="tape-right"></span></div>
+    </div>
   </section>
 
-  <section>
-    <p class="label" id="unit-label">Unit</p>
-    <div class="seg units" role="group" aria-labelledby="unit-label">
+  <section class="controls">
+    <div class="seg prec" role="group" aria-label="Round to nearest">
+      <button type="button" data-den="16" aria-pressed="true">nearest 1/16"</button>
+      <button type="button" data-den="32" aria-pressed="false">nearest 1/32"</button>
+    </div>
+    <div class="seg units" role="group" aria-label="Unit">
       <button type="button" data-unit="mm" aria-pressed="true">mm</button>
       <button type="button" data-unit="cm" aria-pressed="false">cm</button>
       <button type="button" data-unit="m" aria-pressed="false">m</button>
       <button type="button" data-unit="in" aria-pressed="false">in</button>
       <button type="button" data-unit="ft" aria-pressed="false">ft</button>
     </div>
-  </section>
-
-  <section>
-    <p class="label" id="prec-label">Round to nearest</p>
-    <div class="seg prec" role="group" aria-labelledby="prec-label">
-      <button type="button" data-den="16" aria-pressed="true">1/16"</button>
-      <button type="button" data-den="32" aria-pressed="false">1/32"</button>
-    </div>
-  </section>
-
-  <section class="result" aria-live="polite">
-    <div class="answer-row">
-      <p id="answer">5"</p>
+    <div class="pad">
+      <button type="button" data-key="7">7</button>
+      <button type="button" data-key="8">8</button>
+      <button type="button" data-key="9">9</button>
+      <button type="button" data-key="back" class="fn" aria-label="Delete">⌫</button>
+      <button type="button" data-key="4">4</button>
+      <button type="button" data-key="5">5</button>
+      <button type="button" data-key="6">6</button>
+      <button type="button" data-key="clear" class="fn" aria-label="Clear">C</button>
+      <button type="button" data-key="1">1</button>
+      <button type="button" data-key="2">2</button>
+      <button type="button" data-key="3">3</button>
       <button type="button" id="copy">Copy</button>
-    </div>
-    <div class="details">
-      <span id="feet"></span>
-      <span id="exact"></span>
-      <span id="error"></span>
-    </div>
-    <div class="tape-wrap" aria-hidden="true">
-      <svg id="tape" viewBox="0 0 320 64" preserveAspectRatio="none"></svg>
-      <div class="tape-cap"><span id="tape-left"></span><span id="tape-right"></span></div>
+      <button type="button" data-key="0" class="zero">0</button>
+      <button type="button" data-key=".">.</button>
     </div>
   </section>
-
-  <footer>1 inch = 25.4 mm exactly. Values round to the nearest mark; exact halves round up.</footer>
 </main>
 
 <script>
@@ -211,24 +224,28 @@ function fractionText(whole, num, den) {
   return whole ? `${whole} ${num}/${den}` : `${num}/${den}`;
 }
 
-function parseInput(raw) {
-  const s = raw.trim().replace(',', '.');
-  if (!/^\d*\.?\d+$|^\d+\.$/.test(s)) return null;
-  return parseFloat(s);
-}
-
 // ---- UI ----
 const $ = id => document.getElementById(id);
-let unit = 'mm', den = 16;
+const MAX_LEN = 9;
+let unit = 'mm', den = 16, entry = '127';
 
 try {
   const saved = JSON.parse(localStorage.getItem('wood-calc') || '{}');
   if (saved.unit in TO_INCHES) unit = saved.unit;
   if (saved.den === 16 || saved.den === 32) den = saved.den;
+  if (typeof saved.entry === 'string' && /^\d*\.?\d*$/.test(saved.entry)) entry = saved.entry;
 } catch (e) {}
 
 function save() {
-  try { localStorage.setItem('wood-calc', JSON.stringify({ unit, den })); } catch (e) {}
+  try { localStorage.setItem('wood-calc', JSON.stringify({ unit, den, entry })); } catch (e) {}
+}
+
+function press(key) {
+  if (key === 'clear') entry = '';
+  else if (key === 'back') entry = entry.slice(0, -1);
+  else if (key === '.') { if (!entry.includes('.') && entry.length < MAX_LEN) entry = (entry || '0') + '.'; }
+  else if (entry.length < MAX_LEN) entry = entry === '0' ? key : entry + key;
+  save(); render();
 }
 
 function setPressed(selector, attr, val) {
@@ -236,40 +253,41 @@ function setPressed(selector, attr, val) {
 }
 
 function drawTape(frac) {
-  const svg = $('tape');
-  const W = 320, H = 64, pad = 8, span = W - pad * 2;
+  const W = 320, H = 44, pad = 8, span = W - pad * 2;
   let out = `<rect x="0" y="0" width="${W}" height="${H}" fill="var(--tape)"/>`;
   for (let i = 0; i <= den; i++) {
     const x = pad + (span * i) / den;
     // Tick length by how "big" the mark is: inch, 1/2, 1/4, 1/8, 1/16, 1/32.
-    let len = 14;
-    if (i % (den / 2) === 0) len = i % den === 0 ? 46 : 36;
-    else if (i % (den / 4) === 0) len = 28;
-    else if (i % (den / 8) === 0) len = 22;
-    else if (den === 32 && i % 2 === 0) len = 17;
-    else if (den === 32) len = 11;
+    let len = 9;
+    if (i % (den / 2) === 0) len = i % den === 0 ? 32 : 25;
+    else if (i % (den / 4) === 0) len = 19;
+    else if (i % (den / 8) === 0) len = 14;
+    else if (den === 32 && i % 2 === 0) len = 11;
+    else if (den === 32) len = 7;
     out += `<rect x="${x - 0.75}" y="0" width="1.5" height="${len}" fill="var(--tape-ink)"/>`;
   }
   if (frac) {
     const x = pad + (span * (frac.ticks - frac.whole * den)) / den;
     out += `<rect x="${x - 2}" y="0" width="4" height="${H}" fill="var(--accent)"/>`;
-    out += `<circle cx="${x}" cy="${H - 8}" r="5" fill="var(--accent)"/>`;
+    out += `<circle cx="${x}" cy="${H - 7}" r="5" fill="var(--accent)"/>`;
   }
-  svg.innerHTML = out;
+  $('tape').innerHTML = out;
   const w = frac ? frac.whole : 0;
   $('tape-left').textContent = `${w}"`;
   $('tape-right').textContent = `${w + 1}"`;
 }
 
 function render() {
-  const v = parseInput($('value').value);
   const answer = $('answer');
-  if (v === null) {
-    answer.textContent = $('value').value.trim() ? 'Numbers only' : 'Enter a value';
+  $('entry').innerHTML = entry
+    ? `<span class="num">${entry}</span> ${unit}`
+    : `Type a length in ${unit}`;
+
+  const v = parseFloat(entry);
+  if (!entry || isNaN(v)) {
+    answer.textContent = '0"';
     answer.classList.add('empty');
-    $('feet').textContent = '';
-    $('exact').textContent = $('value').value.trim() ? 'Use digits and one decimal point, e.g. 12.7' : '';
-    $('error').textContent = '';
+    $('feet').textContent = $('exact').textContent = $('error').textContent = '';
     drawTape(null);
     return;
   }
@@ -281,30 +299,41 @@ function render() {
   if (f.rounded >= 12) {
     const ft = Math.floor(f.ticks / (12 * den));
     const rest = toFraction((f.ticks - ft * 12 * den) / den, den);
-    $('feet').innerHTML = `<strong>${ft}' ${fractionText(rest.whole, rest.num, rest.den)}"</strong> in feet and inches`;
+    $('feet').innerHTML = `<strong>${ft}' ${fractionText(rest.whole, rest.num, rest.den)}"</strong>`;
   } else {
     $('feet').textContent = '';
   }
 
-  $('exact').textContent = `Exact: ${+inches.toFixed(4)}" (${+(inches * 25.4).toFixed(2)} mm)`;
+  $('exact').textContent = `Exact ${+inches.toFixed(4)}"`;
   const diff = f.rounded - inches;
   if (Math.abs(diff) < 1e-6) {
-    $('error').textContent = 'Lands exactly on the mark';
+    $('error').textContent = 'Right on the mark';
   } else {
     const dir = diff > 0 ? 'over' : 'under';
-    $('error').textContent = `Rounded ${Math.abs(diff).toFixed(4)}" ${dir} (${(Math.abs(diff) * 25.4).toFixed(2)} mm)`;
+    $('error').textContent = `${(Math.abs(diff) * 25.4).toFixed(2)} mm ${dir}`;
   }
   drawTape(f);
 }
 
+document.querySelectorAll('[data-key]').forEach(b => b.addEventListener('click', () => press(b.dataset.key)));
 document.querySelectorAll('[data-unit]').forEach(b => b.addEventListener('click', () => {
   unit = b.dataset.unit; setPressed('[data-unit]', 'unit', unit); save(); render();
 }));
 document.querySelectorAll('[data-den]').forEach(b => b.addEventListener('click', () => {
   den = +b.dataset.den; setPressed('[data-den]', 'den', den); save(); render();
 }));
-$('value').addEventListener('input', render);
-$('value').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+
+// Hardware keyboard support for desktop use.
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key;
+  if (/^[0-9]$/.test(k)) press(k);
+  else if (k === '.' || k === ',') press('.');
+  else if (k === 'Backspace') press('back');
+  else if (k === 'Escape' || k === 'Delete') press('clear');
+  else return;
+  e.preventDefault();
+});
 
 $('copy').addEventListener('click', async () => {
   const text = $('answer').textContent;

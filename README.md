@@ -8,7 +8,7 @@ It also shows:
 - the exact decimal value, and how far the rounded mark is over or under it
 - a one-inch strip of tape with the mark highlighted
 
-Everything lives in `index.html` — no build step, no dependencies. Your last unit and precision are remembered on your device.
+Everything lives in `index.html` — no build step, no dependencies. It has its own number pad, so the phone keyboard never covers the answer, and it fits on one iPhone screen for one-handed use. Your last value, unit and precision are remembered on your device.
 
 ## Putting it on your phone
 
