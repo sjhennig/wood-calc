@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wood Calc</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Convert metric and decimal imperial measurements to the nearest 1/16 or 1/32 inch.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Wood Calc">
+<meta name="theme-color" content="#f3f1ec">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column, like a card pinned above the bench — input on top, the answer in big type, a one-inch ruler showing where it lands. */
+:root {
+  --bg: #f3f1ec;        /* shop paper */
+  --surface: #ffffff;
+  --fg: #22252a;        /* graphite */
+  --muted: #646a72;
+  --line: #d9d6ce;
+  --accent: #c8541c;    /* pencil-mark orange */
+  --accent-fg: #ffffff;
+  --tape: #f2c230;      /* tape-measure yellow */
+  --tape-ink: #22252a;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17191c; --surface: #212429; --fg: #ece9e2; --muted: #9aa0a8; --line: #343840;
+    --accent: #ef7a3f; --accent-fg: #17191c; --tape: #e3b62b; --tape-ink: #17191c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17191c; --surface: #212429; --fg: #ece9e2; --muted: #9aa0a8; --line: #343840;
+  --accent: #ef7a3f; --accent-fg: #17191c; --tape: #e3b62b; --tape-ink: #17191c;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: max(20px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-bottom, 0px));
+}
+main { max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+
+header h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.6rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+  display: flex; align-items: center; gap: 10px;
+}
+header h1::before {
+  content: ""; width: 22px; height: 14px; border-radius: 2px;
+  background: var(--tape);
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.18);
+}
+
+.label {
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 6px;
+}
+
+#value {
+  width: 100%;
+  font: 600 2.2rem/1.1 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+#value:focus { outline: none; border-color: var(--accent); }
+
+.seg { display: grid; gap: 6px; }
+.seg.units { grid-template-columns: repeat(5, 1fr); }
+.seg.prec { grid-template-columns: repeat(2, 1fr); }
+.seg button {
+  font: 600 1rem var(--font-body);
+  color: var(--fg);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 0;
+  min-height: 46px;
+  cursor: pointer;
+}
+.seg button[aria-pressed="true"] {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-fg);
+}
+.seg button:focus-visible, #copy:focus-visible { outline: 3px solid var(--tape); outline-offset: 2px; }
+
+.result {
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.answer-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+#answer {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2.6rem, 14vw, 3.6rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#answer.empty { color: var(--muted); font-size: 2rem; }
+#copy {
+  flex: none;
+  font: 600 0.85rem var(--font-body);
+  color: var(--fg); background: transparent;
+  border: 2px solid var(--line); border-radius: 8px;
+  padding: 8px 12px; cursor: pointer;
+}
+.details { display: flex; flex-direction: column; gap: 2px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.details strong { color: var(--fg); font-weight: 600; }
+
+/* One inch of tape, ticks at the chosen precision */
+.tape-wrap { margin-top: 4px; }
+#tape { display: block; width: 100%; height: 64px; }
+.tape-cap { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+footer { font-size: 0.85rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header><h1>Wood Calc</h1></header>
+
+  <section>
+    <p class="label"><label for="value">Measurement</label></p>
+    <input id="value" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" value="127" aria-describedby="answer">
+  </section>
+
+  <section>
+    <p class="label" id="unit-label">Unit</p>
+    <div class="seg units" role="group" aria-labelledby="unit-label">
+      <button type="button" data-unit="mm" aria-pressed="true">mm</button>
+      <button type="button" data-unit="cm" aria-pressed="false">cm</button>
+      <button type="button" data-unit="m" aria-pressed="false">m</button>
+      <button type="button" data-unit="in" aria-pressed="false">in</button>
+      <button type="button" data-unit="ft" aria-pressed="false">ft</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label" id="prec-label">Round to nearest</p>
+    <div class="seg prec" role="group" aria-labelledby="prec-label">
+      <button type="button" data-den="16" aria-pressed="true">1/16"</button>
+      <button type="button" data-den="32" aria-pressed="false">1/32"</button>
+    </div>
+  </section>
+
+  <section class="result" aria-live="polite">
+    <div class="answer-row">
+      <p id="answer">5"</p>
+      <button type="button" id="copy">Copy</button>
+    </div>
+    <div class="details">
+      <span id="feet"></span>
+      <span id="exact"></span>
+      <span id="error"></span>
+    </div>
+    <div class="tape-wrap" aria-hidden="true">
+      <svg id="tape" viewBox="0 0 320 64" preserveAspectRatio="none"></svg>
+      <div class="tape-cap"><span id="tape-left"></span><span id="tape-right"></span></div>
+    </div>
+  </section>
+
+  <footer>1 inch = 25.4 mm exactly. Values round to the nearest mark; exact halves round up.</footer>
+</main>
+
+<script>
+// Inches per one of each unit.
+const TO_INCHES = { mm: 1 / 25.4, cm: 10 / 25.4, m: 1000 / 25.4, in: 1, ft: 12 };
+
+function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+
+// Round a length in inches to the nearest 1/den and return its parts.
+function toFraction(inches, den) {
+  // Tiny nudge so values like 0.03125 that land exactly on a mark aren't lost to float error.
+  const ticks = Math.round(inches * den + 1e-9);
+  const whole = Math.floor(ticks / den);
+  let num = ticks % den;
+  let d = den;
+  if (num) { const g = gcd(num, d); num /= g; d /= g; }
+  return { ticks, whole, num, den: d, rounded: ticks / den };
+}
+
+function fractionText(whole, num, den) {
+  if (!num) return `${whole}`;
+  return whole ? `${whole} ${num}/${den}` : `${num}/${den}`;
+}
+
+function parseInput(raw) {
+  const s = raw.trim().replace(',', '.');
+  if (!/^\d*\.?\d+$|^\d+\.$/.test(s)) return null;
+  return parseFloat(s);
+}
+
+// ---- UI ----
+const $ = id => document.getElementById(id);
+let unit = 'mm', den = 16;
+
+try {
+  const saved = JSON.parse(localStorage.getItem('wood-calc') || '{}');
+  if (saved.unit in TO_INCHES) unit = saved.unit;
+  if (saved.den === 16 || saved.den === 32) den = saved.den;
+} catch (e) {}
+
+function save() {
+  try { localStorage.setItem('wood-calc', JSON.stringify({ unit, den })); } catch (e) {}
+}
+
+function setPressed(selector, attr, val) {
+  document.querySelectorAll(selector).forEach(b => b.setAttribute('aria-pressed', String(b.dataset[attr] === String(val))));
+}
+
+function drawTape(frac) {
+  const svg = $('tape');
+  const W = 320, H = 64, pad = 8, span = W - pad * 2;
+  let out = `<rect x="0" y="0" width="${W}" height="${H}" fill="var(--tape)"/>`;
+  for (let i = 0; i <= den; i++) {
+    const x = pad + (span * i) / den;
+    // Tick length by how "big" the mark is: inch, 1/2, 1/4, 1/8, 1/16, 1/32.
+    let len = 14;
+    if (i % (den / 2) === 0) len = i % den === 0 ? 46 : 36;
+    else if (i % (den / 4) === 0) len = 28;
+    else if (i % (den / 8) === 0) len = 22;
+    else if (den === 32 && i % 2 === 0) len = 17;
+    else if (den === 32) len = 11;
+    out += `<rect x="${x - 0.75}" y="0" width="1.5" height="${len}" fill="var(--tape-ink)"/>`;
+  }
+  if (frac) {
+    const x = pad + (span * (frac.ticks - frac.whole * den)) / den;
+    out += `<rect x="${x - 2}" y="0" width="4" height="${H}" fill="var(--accent)"/>`;
+    out += `<circle cx="${x}" cy="${H - 8}" r="5" fill="var(--accent)"/>`;
+  }
+  svg.innerHTML = out;
+  const w = frac ? frac.whole : 0;
+  $('tape-left').textContent = `${w}"`;
+  $('tape-right').textContent = `${w + 1}"`;
+}
+
+function render() {
+  const v = parseInput($('value').value);
+  const answer = $('answer');
+  if (v === null) {
+    answer.textContent = $('value').value.trim() ? 'Numbers only' : 'Enter a value';
+    answer.classList.add('empty');
+    $('feet').textContent = '';
+    $('exact').textContent = $('value').value.trim() ? 'Use digits and one decimal point, e.g. 12.7' : '';
+    $('error').textContent = '';
+    drawTape(null);
+    return;
+  }
+  answer.classList.remove('empty');
+  const inches = v * TO_INCHES[unit];
+  const f = toFraction(inches, den);
+  answer.textContent = fractionText(f.whole, f.num, f.den) + '"';
+
+  if (f.rounded >= 12) {
+    const ft = Math.floor(f.ticks / (12 * den));
+    const rest = toFraction((f.ticks - ft * 12 * den) / den, den);
+    $('feet').innerHTML = `<strong>${ft}' ${fractionText(rest.whole, rest.num, rest.den)}"</strong> in feet and inches`;
+  } else {
+    $('feet').textContent = '';
+  }
+
+  $('exact').textContent = `Exact: ${+inches.toFixed(4)}" (${+(inches * 25.4).toFixed(2)} mm)`;
+  const diff = f.rounded - inches;
+  if (Math.abs(diff) < 1e-6) {
+    $('error').textContent = 'Lands exactly on the mark';
+  } else {
+    const dir = diff > 0 ? 'over' : 'under';
+    $('error').textContent = `Rounded ${Math.abs(diff).toFixed(4)}" ${dir} (${(Math.abs(diff) * 25.4).toFixed(2)} mm)`;
+  }
+  drawTape(f);
+}
+
+document.querySelectorAll('[data-unit]').forEach(b => b.addEventListener('click', () => {
+  unit = b.dataset.unit; setPressed('[data-unit]', 'unit', unit); save(); render();
+}));
+document.querySelectorAll('[data-den]').forEach(b => b.addEventListener('click', () => {
+  den = +b.dataset.den; setPressed('[data-den]', 'den', den); save(); render();
+}));
+$('value').addEventListener('input', render);
+$('value').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+
+$('copy').addEventListener('click', async () => {
+  const text = $('answer').textContent;
+  const btn = $('copy');
+  try { await navigator.clipboard.writeText(text); btn.textContent = 'Copied'; }
+  catch (e) {
+    const r = document.createRange(); r.selectNodeContents($('answer'));
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    btn.textContent = 'Selected';
+  }
+  setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+});
+
+setPressed('[data-unit]', 'unit', unit);
+setPressed('[data-den]', 'den', den);
+render();
+</script>
+</body>
+</html>
